@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <application
+        android:label="Mist Widgets"
+        android:icon="@drawable/ic_launcher"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.DeviceDefault.Light.DarkActionBar">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity android:name=".AssistActivity" android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true"/>
+        <service android:name=".PlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
+        <receiver android:name=".ActionReceiver" android:exported="false"/>
+        <receiver android:name=".TickReceiver" android:exported="false"/>
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".FrClock" android:label="Frieren - Clock" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".FrCal" android:label="Frieren - Calendar" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_sq"/>
+        </receiver>
+        <receiver android:name=".FrPhotoA" android:label="Frieren - Image A" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_sq"/>
+        </receiver>
+        <receiver android:name=".FrPhotoB" android:label="Frieren - Image B" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_sq"/>
+        </receiver>
+        <receiver android:name=".FrQuote" android:label="Frieren - Quote" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".FrWeather" android:label="Frieren - Weather" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".FrTasks" android:label="Frieren - Tasks" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_sq"/>
+        </receiver>
+        <receiver android:name=".FrMusic" android:label="Frieren - Music" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".HmOrbit" android:label="Hail Mary - Orbit and clock" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_big"/>
+        </receiver>
+        <receiver android:name=".HmLink" android:label="Hail Mary - Link bar" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_slim"/>
+        </receiver>
+        <receiver android:name=".HmCal" android:label="Hail Mary - Calendar" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".HmStatus" android:label="Hail Mary - Status" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".HmWeather" android:label="Hail Mary - Weather" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".HmTasks" android:label="Hail Mary - Tasks" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".HmMusic" android:label="Hail Mary - Music" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".HmEarth" android:label="Hail Mary - Earth art" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".TvHeader" android:label="TVA - Terminal" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_slim"/>
+        </receiver>
+        <receiver android:name=".TvClock" android:label="TVA - Clock" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".TvWeather" android:label="TVA - Weather" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".TvTimeline" android:label="TVA - Timeline" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".TvLog" android:label="TVA - Variance log" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_c3"/>
+        </receiver>
+        <receiver android:name=".TvMiss" android:label="TVA - Miss Minutes" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".TvMusic" android:label="TVA - Music" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+        <receiver android:name=".TvQuote" android:label="TVA - Quote" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_slim"/>
+        </receiver>
+        <receiver android:name=".VcClock" android:label="Vocaloid - Vinyl clock" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".VcMusic" android:label="Vocaloid - Music" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_mid"/>
+        </receiver>
+        <receiver android:name=".VcTasks" android:label="Vocaloid - Tasks" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_sq"/>
+        </receiver>
+        <receiver android:name=".VcRing" android:label="Vocaloid - Progress ring" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_half"/>
+        </receiver>
+        <receiver android:name=".VcBanner" android:label="Vocaloid - Quote banner" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_wide"/>
+        </receiver>
+    </application>
+</manifest>

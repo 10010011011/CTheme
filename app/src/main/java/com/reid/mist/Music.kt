@@ -1,0 +1,156 @@
+package com.reid.mist
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.ContentUris
+import android.content.Context
+import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaMetadataRetriever
+import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.provider.MediaStore
+
+object PS {
+    var title = ""
+    var artist = ""
+    var pos = 0
+    var dur = 0
+    var playing = false
+}
+
+object Music {
+    fun cmd(c: Context, a: String) {
+        c.startForegroundService(Intent(c, PlayerService::class.java).setAction(a))
+    }
+}
+
+class PlayerService : Service() {
+    private var mp: MediaPlayer? = null
+    private val q = ArrayList<Long>()
+    private var qi = -1
+    private val h = Handler(Looper.getMainLooper())
+    private val tick = object : Runnable {
+        override fun run() { sync(); if (PS.playing) h.postDelayed(this, 5000) }
+    }
+
+    override fun onBind(i: Intent?): IBinder? = null
+
+    override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
+        fg()
+        when (i?.action) {
+            "pp" -> toggle()
+            "nx" -> play(qi + 1)
+            "pv" -> play(if (qi < 0) 0 else qi - 1)
+            "st" -> { stopAll(); return START_NOT_STICKY }
+        }
+        if (mp == null) stopSelf()
+        return START_NOT_STICKY
+    }
+
+    private fun stopAll() {
+        h.removeCallbacks(tick)
+        mp?.release(); mp = null
+        PS.playing = false; PS.pos = 0
+        stopForeground(true)
+        stopSelf()
+        Render.refreshAll(this) { it.endsWith("music") }
+    }
+
+    private fun fg() {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(NotificationChannel("mist", "Playback", NotificationManager.IMPORTANCE_LOW))
+        val n = Notification.Builder(this, "mist")
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentTitle(if (PS.title.isEmpty()) "Mist player" else PS.title)
+            .setContentText(PS.artist)
+            .setOngoing(true)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop",
+                PendingIntent.getService(this, 5, Intent(this, PlayerService::class.java).setAction("st"), PendingIntent.FLAG_IMMUTABLE))
+            .build()
+        startForeground(7, n)
+    }
+
+    private fun load() {
+        q.clear()
+        val cur = contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media._ID),
+            MediaStore.Audio.Media.IS_MUSIC + " != 0", null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE")
+        cur?.use { while (it.moveToNext()) q.add(it.getLong(0)) }
+    }
+
+    private fun play(i: Int) {
+        if (q.isEmpty()) load()
+        if (q.isEmpty()) {
+            PS.title = "No songs found"; PS.artist = "Add audio files to the phone"; PS.playing = false
+            sync(); return
+        }
+        qi = ((i % q.size) + q.size) % q.size
+        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, q[qi])
+        try {
+            mp?.release()
+            val m = MediaPlayer()
+            m.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+            m.setDataSource(this, uri)
+            m.setOnCompletionListener { play(qi + 1) }
+            m.prepare(); m.start(); mp = m
+            meta(uri)
+            PS.dur = m.duration; PS.pos = 0; PS.playing = true
+            focus(); fg()
+        } catch (e: Exception) {
+            PS.title = "Can't play this file"; PS.artist = ""; PS.playing = false
+        }
+        sync()
+        h.removeCallbacks(tick); h.postDelayed(tick, 5000)
+    }
+
+    private fun meta(u: Uri) {
+        try {
+            val r = MediaMetadataRetriever()
+            r.setDataSource(this, u)
+            PS.title = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: "Track ${qi + 1}"
+            PS.artist = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown artist"
+            r.release()
+        } catch (e: Exception) { PS.title = "Track ${qi + 1}"; PS.artist = "" }
+    }
+
+    private fun toggle() {
+        val m = mp
+        if (m == null) { play(if (qi < 0) 0 else qi); return }
+        if (m.isPlaying) {
+            m.pause(); PS.playing = false
+        } else {
+            m.start(); PS.playing = true; fg()
+            h.removeCallbacks(tick); h.postDelayed(tick, 5000)
+        }
+        sync()
+    }
+
+    private fun focus() {
+        (getSystemService(AUDIO_SERVICE) as AudioManager).requestAudioFocus({ f ->
+            if (f == AudioManager.AUDIOFOCUS_LOSS || f == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                mp?.let { if (it.isPlaying) it.pause() }
+                PS.playing = false; sync()
+            }
+        }, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+    }
+
+    private fun sync() {
+        mp?.let { try { PS.pos = it.currentPosition; PS.dur = it.duration } catch (e: Exception) { } }
+        Render.refreshAll(this) { it.endsWith("music") }
+    }
+
+    override fun onDestroy() {
+        h.removeCallbacks(tick)
+        mp?.release(); mp = null
+        PS.playing = false
+        super.onDestroy()
+    }
+}
