@@ -1,0 +1,26 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack project.zip if present
+        run: |
+          if [ -f project.zip ]; then mkdir -p proj && unzip -q -o project.zip -d proj && echo "DIR=proj" >> "$GITHUB_ENV"; else echo "DIR=." >> "$GITHUB_ENV"; fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        working-directory: ${{ env.DIR }}
+        run: gradle assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MistWidgets-apk
+          path: ${{ env.DIR }}/app/build/outputs/apk/debug/*.apk
