@@ -5,6 +5,14 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
+    </queries>
     <application
         android:label="Mist Widgets"
         android:icon="@drawable/ic_launcher"
@@ -17,6 +25,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".AssistActivity" android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true"/>
+        <activity android:name=".WeatherActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
+        <activity android:name=".MusicActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault"/>
+        <activity android:name=".SizesActivity" android:exported="false"/>
+        <activity android:name=".WeatherLaunchActivity" android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true"/>
         <service android:name=".PlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
         <receiver android:name=".ActionReceiver" android:exported="false"/>
@@ -147,3 +160,4 @@
         </receiver>
     </application>
 </manifest>
+                
