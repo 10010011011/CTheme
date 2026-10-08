@@ -22,6 +22,20 @@ private val M2 = k("#4c8a8c")
 
 private fun glass(d: D) = dRR(d.c, 2f, 2f, d.w - 2, d.h - 2, 20f, k("#99ffffff"), k("#d9ffffff"), 1.2f)
 
+private val VC_T = TStyle(
+    card = { glass(it) }, title = "TODAY", tfH = SANS, hSize = 11f, hLs = .12f, head = M2,
+    tf = SANS, txt = TXT, doneCol = k("#6f9a9b"), sub = M2,
+    box = TL, boxFill = TL, boxDone = TL, check = WHITE,
+    circle = true, rule = null, num = false, right = false, count = false
+)
+
+private val VC_M = MStyle(
+    card = { glass(it) },
+    art = { d, l, t, s -> dArt(d.c, d.x, l, t, s, 14f, TL2, WHITE) },
+    tf = SANS, tfT = MED, title = TXT, sub = M2, bar = PK, barBg = k("#261f4e52"), ico = TXT,
+    playBg = TL, playFg = WHITE, box = null, ls = 0f
+)
+
 private fun hand(c: Canvas, cx: Float, cy: Float, deg: Float, l: Float, w: Float) {
     val a = rad(deg)
     dLine(c, cx, cy, cx + sin(a) * l, cy - cos(a) * l, TXT, w, null, true)
@@ -54,11 +68,13 @@ fun vcClock(d: D) {
 
     val x0 = 2 * r + 24f
     val rw = d.w - x0 - 10f
+    val narrow = rw < 150f
     val u = (2 * r) / 160f
     val top = cy - r
     dTx(c, String.format(Locale.US, "%02d", d.now.get(Calendar.DAY_OF_MONTH)), x0, top + 42f * u, 46f * u, TXT, LIGHT)
     dTx(c, SimpleDateFormat("MMM", Locale.ENGLISH).format(d.now.time).uppercase(), x0, top + 62f * u, 14f * u, TXT, SANS, LFT, .2f)
     dTx(c, SimpleDateFormat("EEEE", Locale.ENGLISH).format(d.now.time), x0, top + 82f * u, 16f * u, PK2, SERIFI)
+    if (narrow) return
     val mon = weekStart(d.now)
     val cw = rw / 7
     for (i in 0 until 7) {
@@ -78,70 +94,9 @@ fun vcClock(d: D) {
     dTx(c, dFit((if (wx != null) "${wx.temp.roundToInt()}°C  " else "") + Store.cityName(d.x), pr - x0 - 34f, 12f), x0 + 28f, pt0 + 16.5f, 12f, TXT)
 }
 
-private fun art(c: Canvas, l: Float, t: Float, s: Float) {
-    c.save()
-    c.translate(l, t)
-    c.scale(s / 70f, s / 70f)
-    val clip = Path()
-    clip.addRoundRect(RectF(0f, 0f, 70f, 70f), 14f, 14f, Path.Direction.CW)
-    c.clipPath(clip)
-    dRR(c, 0f, 0f, 70f, 70f, 0f, TL2)
-    val p1 = Path()
-    p1.moveTo(-5f, 52f); p1.cubicTo(20f, 32f, 40f, 62f, 75f, 27f)
-    dPath(c, p1, k("#d9ffffff"), false, 7f)
-    val p2 = Path()
-    p2.moveTo(-5f, 64f); p2.cubicTo(25f, 47f, 45f, 72f, 75f, 44f)
-    dPath(c, p2, PK, false, 5f)
-    dCirc(c, 48f, 18f, 8f, k("#b3ffffff"))
-    c.restore()
-}
+fun vcMusic(d: D) = drawMusic(d, VC_M)
 
-fun vcMusic(d: D) {
-    val c = d.c
-    glass(d)
-    val rh = d.h / 3
-    val a = min(rh * 2 - 16f, 78f)
-    art(c, 14f, 14f, a)
-    val x0 = 28f + a
-    val mw = d.w - x0 - 60f
-    dTx(c, dFit(musTitle(), mw, 15f, MED), x0, 32f, 15f, TXT, MED)
-    dTx(c, dFit(musArtist(), mw, 12f), x0, 50f, 12f, M2)
-    val hs = floatArrayOf(.55f, 1f, .45f, .85f, .6f)
-    for (i in 0 until 5) {
-        val bh = 20f * hs[i]
-        dRR(c, d.w - 50f + i * 7f, 38f - bh, d.w - 46f + i * 7f, 38f, 2f, if (i % 2 == 0) TL else PK)
-    }
-    val by = 14f + a - 14f
-    dBar(c, x0, d.w - 14f, by, musFrac(), PK, k("#26" + "1f4e52"), 4f)
-    dTx(c, mmss(PS.pos), x0, by + 14f, 10f, M2)
-    dTx(c, mmss(PS.dur), d.w - 14f, by + 14f, 10f, M2, SANS, RGT)
-    val cy = rh * 2.5f
-    val u = d.w / 7
-    dIco(c, "prev", u * 2.5f, cy, 18f, TXT)
-    dCirc(c, u * 3.5f, cy, 20f, TL)
-    dIco(c, if (PS.playing) "pause" else "play", u * 3.5f, cy, 17f, WHITE)
-    dIco(c, "next", u * 4.5f, cy, 18f, TXT)
-}
-
-fun vcTasks(d: D) {
-    glass(d)
-    val c = d.c
-    val rh = d.h / 5
-    val v = Store.view(d.x)
-    dTx(c, "TODAY", 16f, rh * .66f, 11f, M2, SANS, LFT, .12f)
-    for (i in 0 until 4) {
-        val t = v.getOrNull(i)?.second ?: break
-        val cy = rh * (i + 1.5f)
-        if (t.d) {
-            dCirc(c, 24f, cy, 8f, TL)
-            dIco(c, "check", 24f, cy, 10f, WHITE)
-        } else dCirc(c, 24f, cy, 8f, null, TL, 1.5f)
-        val tx = dFit(t.t, d.w - 60f, 13f)
-        val tc = if (t.d) k("#6f9a9b") else TXT
-        dTx(c, tx, 40f, cy + 4.5f, 13f, tc)
-        if (t.d) dLine(c, 40f, cy + 1.5f, 40f + dTw(tx, 13f), cy + 1.5f, tc, 1f)
-    }
-}
+fun vcTasks(d: D) = drawTasks(d, VC_T)
 
 fun vcRing(d: D) {
     glass(d)
@@ -195,5 +150,5 @@ fun vcBanner(d: D) {
     dLine(c, 326.5f, 69f, 326.5f, 50f, k("#b31f4e52"), 1.8f)
     dLine(c, 326.5f, 50f, 334f, 56f, k("#b31f4e52"), 1.8f, null, true)
     c.restore()
-    dPara(c, Store.quote(d.x, "vc"), 20f, d.h / 2, d.w * .58f, min(d.h * .17f, 19f), TXT, SERIFI, min(d.h * .24f, 24f), 3)
+    dFitPara(c, Store.quote(d.x, "vc"), 20f, 8f, d.w * .58f, d.h - 16f, 11f, 28f, TXT, SERIFI, LFT, 0f, 1.25f)
 }
