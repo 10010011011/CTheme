@@ -20,28 +20,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 
 // ---------- widget definition ----------
-class Def(
-    val w: Int, val h: Int, val draw: (D) -> Unit,
-    val rows: Int = 0, val ticks: Boolean = false, val tap: String = "app",
-    val act: (Int, Int, Context) -> String? = { _, _, _ -> null }
-)
-
-// row 0 = header, rows 1.. = tasks (open tasks first)
-val taskAct: (Int, Int, Context) -> String? = { r, _, x ->
-    if (r >= 1) Store.view(x).getOrNull(r - 1)?.let { "tg:${it.first}" } else null
-}
-
-// prev / play / next sit in three consecutive columns (of 7) of one row
-fun musAct(row: Int, c0: Int): (Int, Int, Context) -> String? = { r, c, _ ->
-    if (r != row) null else when (c - c0) {
-        0 -> "pv"
-        1 -> "pp"
-        2 -> "nx"
-        else -> null
-    }
-}
+class Def(val w: Int, val h: Int, val draw: (D) -> Unit, val ticks: Boolean = false, val tap: String = "app")
 
 // ---------- storage ----------
 class Task(var t: String, var d: Boolean)
@@ -68,6 +51,19 @@ object Store {
         val l = tasks(c)
         if (i in l.indices) { l[i].d = !l[i].d; saveTasks(c, l) }
     }
+
+    fun wxTap(c: Context): String = sp(c).getString("wxtap", "auto") ?: "auto"
+    fun setWxTap(c: Context, v: String) { sp(c).edit().putString("wxtap", v).apply() }
+    fun size(c: Context, key: String): Int = sp(c).getInt("sz_$key", 100)
+    fun setSize(c: Context, key: String, v: Int) { sp(c).edit().putInt("sz_$key", v).apply() }
+    fun auto(c: Context): Boolean = sp(c).getBoolean("auto", true)
+    fun setAuto(c: Context, v: Boolean) { sp(c).edit().putBoolean("auto", v).apply() }
+    fun wjson(c: Context): String? = sp(c).getString("wjson", null)
+    fun ajson(c: Context): String? = sp(c).getString("ajson", null)
+    fun saveJson(c: Context, w: String) { sp(c).edit().putString("wjson", w).apply() }
+    fun saveAir(c: Context, a: String) { sp(c).edit().putString("ajson", a).apply() }
+    fun wtry(c: Context): Long = sp(c).getLong("wtry", 0)
+    fun setWtry(c: Context, t: Long) { sp(c).edit().putLong("wtry", t).apply() }
 
     val QD = mapOf(
         "fr" to "Even in the fog, there are roads worth walking.",
@@ -105,8 +101,10 @@ object Store {
 object Weather {
     fun stale(c: Context): Boolean {
         val w = Store.wx(c)
-        return w == null || System.currentTimeMillis() - w.ts > 30 * 60 * 1000
+        return w == null || System.currentTimeMillis() - w.ts > 15 * 60 * 1000
     }
+
+    fun due(c: Context): Boolean = stale(c) && System.currentTimeMillis() - Store.wtry(c) > 5 * 60 * 1000
 
     private fun get(u: String): String {
         val cn = URL(u).openConnection() as HttpURLConnection
@@ -120,15 +118,26 @@ object Weather {
     }
 
     fun fetch(c: Context): Boolean {
+        Store.setWtry(c, System.currentTimeMillis())
         return try {
-            val u = "https://api.open-meteo.com/v1/forecast?latitude=${Store.lat(c)}&longitude=${Store.lon(c)}" +
-                "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=1"
-            val j = JSONObject(get(u))
-            val cur = j.getJSONObject("current"); val d = j.getJSONObject("daily")
+            val la = Store.lat(c)
+            val lo = Store.lon(c)
+            val raw = get("https://api.open-meteo.com/v1/forecast?latitude=$la&longitude=$lo" +
+                "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,precipitation,is_day" +
+                "&hourly=temperature_2m,precipitation_probability,weather_code,visibility" +
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset,uv_index_max" +
+                "&timezone=auto&forecast_days=7&wind_speed_unit=kmh")
+            val j = JSONObject(raw)
+            val cur = j.getJSONObject("current")
+            val d = j.getJSONObject("daily")
             Store.saveWx(c, Store.Wx(
                 cur.getDouble("temperature_2m").toFloat(), cur.getInt("weather_code"),
                 d.getJSONArray("temperature_2m_max").getDouble(0).toFloat(), d.getJSONArray("temperature_2m_min").getDouble(0).toFloat(),
                 mins(d.getJSONArray("sunrise").getString(0)), mins(d.getJSONArray("sunset").getString(0)), System.currentTimeMillis()))
+            Store.saveJson(c, raw)
+            try {
+                Store.saveAir(c, get("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$la&longitude=$lo&current=us_aqi,pm2_5&timezone=auto"))
+            } catch (e: Exception) { }
             true
         } catch (e: Exception) { false }
     }
@@ -166,9 +175,13 @@ object Render {
             "ast" -> PendingIntent.getActivity(c, 2, Intent(c, AssistActivity::class.java).addFlags(nt), f)
             "cal" -> PendingIntent.getActivity(c, 3,
                 Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR).addFlags(nt), f)
+            "wx" -> PendingIntent.getActivity(c, 4, Intent(c, WeatherLaunchActivity::class.java).addFlags(nt), f)
+            "mus" -> PendingIntent.getActivity(c, 6, Intent(c, MusicActivity::class.java).addFlags(nt), f)
             else -> PendingIntent.getBroadcast(c, 0, Intent(c, ActionReceiver::class.java).setAction("mist:$a"), f)
         }
     }
+
+    private fun fix(a: String, perm: Boolean): String = if (!perm && (a == "pp" || a == "nx" || a == "pv")) "app" else a
 
     fun update(c: Context, m: AppWidgetManager, id: Int, key: String) {
         val def = Reg.m[key] ?: return
@@ -181,26 +194,50 @@ object Render {
         var s = dn
         if (wd * s > 1000f) s = 1000f / wd
         if (hd * s > 1500f) s = 1500f / hd
+        // content grows with the widget frame (gently, and never below 80%), then the per-widget slider applies
+        val fit = min(wd / def.w, hd / def.h)
+        val auto = if (Store.auto(c)) fit.pow(.7f).coerceIn(.8f, 2.5f) else 1f
+        val u = auto * Store.size(c, key) / 100f
         val bmp = Bitmap.createBitmap(max(1, (wd * s).toInt()), max(1, (hd * s).toInt()), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp)
-        cv.scale(s, s)
-        try { def.draw(D(cv, wd, hd, c)) } catch (e: Throwable) { }
+        cv.scale(s * u, s * u)
+        val d = D(cv, wd / u, hd / u, c)
+        try { def.draw(d) } catch (e: Throwable) { }
         val rv = RemoteViews(c.packageName, R.layout.widget)
         rv.setImageViewBitmap(R.id.img, bmp)
         rv.setOnClickPendingIntent(R.id.root, pi(c, def.tap))
-        if (def.rows > 0) {
+        if (d.zones.isEmpty()) {
+            rv.setViewVisibility(R.id.rows, View.GONE)
+        } else {
             val perm = c.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            rv.setViewVisibility(R.id.rows, View.VISIBLE)
-            for (r in 0 until 7) {
-                rv.setViewVisibility(ROW[r], if (r < def.rows) View.VISIBLE else View.GONE)
-                if (r >= def.rows) continue
-                for (cc in 0 until 7) {
-                    var a = def.act(r, cc, c)
-                    if (a != null && !perm && (a == "pp" || a == "nx" || a == "pv")) a = "app"
-                    if (a != null) rv.setOnClickPendingIntent(CELL[r][cc], pi(c, a))
+            val cw = d.w / COLS
+            val ch = d.h / ROWS
+            val grid = Array(ROWS) { arrayOfNulls<String>(COLS) }
+            for (r in 0 until ROWS) for (cc in 0 until COLS) {
+                val px = (cc + .5f) * cw
+                val py = (r + .5f) * ch
+                for (z in d.zones) {
+                    var l = z.l
+                    var rr = z.r
+                    var t = z.t
+                    var b = z.b
+                    if (rr - l < cw) { val mid = (l + rr) / 2; l = mid - cw / 2; rr = mid + cw / 2 }
+                    if (b - t < ch) { val mid = (t + b) / 2; t = mid - ch / 2; b = mid + ch / 2 }
+                    if (px >= l && px < rr && py >= t && py < b) { grid[r][cc] = z.a; break }
                 }
             }
-        } else rv.setViewVisibility(R.id.rows, View.GONE)
+            rv.setViewVisibility(R.id.rows, View.VISIBLE)
+            for (r in 0 until ROWS) {
+                val first = grid[r][0]
+                var same = first != null
+                for (cc in 1 until COLS) if (grid[r][cc] != first) same = false
+                if (same && first != null) rv.setOnClickPendingIntent(ROW[r], pi(c, fix(first, perm)))
+                else for (cc in 0 until COLS) {
+                    val a = grid[r][cc]
+                    if (a != null) rv.setOnClickPendingIntent(CELL[r][cc], pi(c, fix(a, perm)))
+                }
+            }
+        }
         m.updateAppWidget(id, rv)
     }
 
@@ -260,7 +297,14 @@ object Tick {
 
 class TickReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        if (Render.refreshTicking(c)) Tick.schedule(c)
+        val any = Render.refreshTicking(c)
+        if (any) Tick.schedule(c)
+        if (any && Weather.due(c)) {
+            val pr = goAsync()
+            Thread {
+                try { if (Weather.fetch(c)) Render.refreshAll(c) } finally { pr.finish() }
+            }.start()
+        }
     }
 }
 
