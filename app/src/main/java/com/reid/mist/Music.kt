@@ -8,6 +8,8 @@ import android.app.Service
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
@@ -17,8 +19,12 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.provider.MediaStore
+import java.io.File
+import java.io.FileOutputStream
+import kotlin.math.min
 
 object PS {
+    var id = -1L
     var title = ""
     var artist = ""
     var pos = 0
@@ -27,28 +33,82 @@ object PS {
 }
 
 object Music {
-    fun cmd(c: Context, a: String) {
-        c.startForegroundService(Intent(c, PlayerService::class.java).setAction(a))
+    fun send(c: Context, a: String, id: Long = -1L, ms: Int = 0) {
+        c.startForegroundService(Intent(c, PlayerService::class.java).setAction(a).putExtra("id", id).putExtra("ms", ms))
     }
+
+    fun cmd(c: Context, a: String) = send(c, a)
+}
+
+// optional per-song cover images, stored privately inside the app
+object Cover {
+    private val cache = HashMap<Long, Bitmap>()
+    private fun f(c: Context, id: Long) = File(c.filesDir, "cover_$id.jpg")
+
+    fun has(c: Context, id: Long): Boolean = id >= 0 && f(c, id).exists()
+
+    fun get(c: Context, id: Long): Bitmap? {
+        if (id < 0) return null
+        cache[id]?.let { return it }
+        val file = f(c, id)
+        if (!file.exists()) return null
+        val b = BitmapFactory.decodeFile(file.path) ?: return null
+        cache[id] = b
+        return b
+    }
+
+    fun save(c: Context, id: Long, uri: Uri): Boolean {
+        try {
+            val o = BitmapFactory.Options()
+            o.inJustDecodeBounds = true
+            c.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, o) }
+            var s = 1
+            while (o.outWidth / (s * 2) >= 600 && o.outHeight / (s * 2) >= 600) s *= 2
+            val o2 = BitmapFactory.Options()
+            o2.inSampleSize = s
+            val b = c.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, o2) } ?: return false
+            val side = min(b.width, b.height)
+            val sq = Bitmap.createBitmap(b, (b.width - side) / 2, (b.height - side) / 2, side, side)
+            val out = Bitmap.createScaledBitmap(sq, min(side, 480), min(side, 480), true)
+            FileOutputStream(f(c, id)).use { out.compress(Bitmap.CompressFormat.JPEG, 88, it) }
+            cache.remove(id)
+            return true
+        } catch (e: Exception) { return false }
+    }
+
+    fun remove(c: Context, id: Long) { f(c, id).delete(); cache.remove(id) }
 }
 
 class PlayerService : Service() {
     private var mp: MediaPlayer? = null
     private val q = ArrayList<Long>()
     private var qi = -1
+    private var n = 0
     private val h = Handler(Looper.getMainLooper())
     private val tick = object : Runnable {
-        override fun run() { sync(); if (PS.playing) h.postDelayed(this, 5000) }
+        override fun run() {
+            n++
+            mp?.let { try { PS.pos = it.currentPosition; PS.dur = it.duration } catch (e: Exception) { } }
+            if (n % 5 == 0) sync()
+            if (PS.playing) h.postDelayed(this, 1000)
+        }
     }
 
     override fun onBind(i: Intent?): IBinder? = null
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
         fg()
-        when (i?.action) {
+        val ex = i ?: Intent()
+        when (ex.action) {
             "pp" -> toggle()
             "nx" -> play(qi + 1)
             "pv" -> play(if (qi < 0) 0 else qi - 1)
+            "pl" -> {
+                if (q.isEmpty()) load()
+                val ix = q.indexOf(ex.getLongExtra("id", -1L))
+                play(if (ix < 0) 0 else ix)
+            }
+            "sk" -> { mp?.seekTo(ex.getIntExtra("ms", 0)); sync() }
             "st" -> { stopAll(); return START_NOT_STICKY }
         }
         if (mp == null) stopSelf()
@@ -93,6 +153,7 @@ class PlayerService : Service() {
             sync(); return
         }
         qi = ((i % q.size) + q.size) % q.size
+        PS.id = q[qi]
         val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, q[qi])
         try {
             mp?.release()
@@ -108,7 +169,7 @@ class PlayerService : Service() {
             PS.title = "Can't play this file"; PS.artist = ""; PS.playing = false
         }
         sync()
-        h.removeCallbacks(tick); h.postDelayed(tick, 5000)
+        h.removeCallbacks(tick); h.postDelayed(tick, 1000)
     }
 
     private fun meta(u: Uri) {
@@ -128,7 +189,7 @@ class PlayerService : Service() {
             m.pause(); PS.playing = false
         } else {
             m.start(); PS.playing = true; fg()
-            h.removeCallbacks(tick); h.postDelayed(tick, 5000)
+            h.removeCallbacks(tick); h.postDelayed(tick, 1000)
         }
         sync()
     }
