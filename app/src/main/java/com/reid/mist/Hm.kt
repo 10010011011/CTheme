@@ -36,6 +36,20 @@ private val RD = k("#e5322d")
 
 private fun panel(d: D) = dRR(d.c, 1f, 1f, d.w - 1, d.h - 1, 12f, BG, ED, 1f)
 
+private val HM_T = TStyle(
+    card = { panel(it) }, title = "LOG // TASKS", tfH = MONO, hSize = 11f, hLs = .14f, head = TX,
+    tf = MONO, txt = TW, doneCol = MU, sub = GR,
+    box = k("#5d6a73"), boxFill = k("#228fd19e"), boxDone = GR, check = GR,
+    circle = false, rule = k("#1b2227"), num = false, right = false, count = true
+)
+
+private val HM_M = MStyle(
+    card = { panel(it) },
+    art = { d, l, t, s -> dArt(d.c, d.x, l, t, s, 8f, k("#0e1418"), GR, ED) },
+    tf = MONO, tfT = MONO, title = TW, sub = MU, bar = RD, barBg = k("#1b2227"), ico = TX,
+    playBg = null, playFg = TX, box = ED, ls = .06f
+)
+
 // ---------- astronomy (all offline) ----------
 object Astro {
     class E(val lam: Double, val r: Double, val v: Double, val pct: Double)
@@ -132,7 +146,7 @@ fun hmOrbit(d: D) {
     val c = d.c
     val w = d.w
     val e = Astro.earth(System.currentTimeMillis())
-    val fs = min(w * .17f, 62f)
+    val fs = min(w * .17f, d.h * .13f)
     val y1 = 6f + fs * .85f
     val hh = String.format(Locale.US, "%02d", d.now.get(Calendar.HOUR_OF_DAY))
     val mm = String.format(Locale.US, "%02d", d.now.get(Calendar.MINUTE))
@@ -169,11 +183,10 @@ fun hmOrbit(d: D) {
 fun hmLink(d: D) {
     panel(d)
     val c = d.c
-    val cy = d.h / 2
-    dCirc(c, 22f, cy, 4.5f, GR)
-    dTx(c, "LINK STABLE", 40f, cy - 2f, 12f, GR, MONO, LFT, .16f)
-    dTx(c, dFit(Store.quote(d.x, "hm"), d.w - 80f, 12f, MONO), 40f, cy + 15f, 12f, MU, MONO)
-    dIco(c, "chev", d.w - 20f, cy, 14f, MU)
+    dCirc(c, 22f, 26f, 4.5f, GR)
+    dTx(c, "LINK STABLE", 40f, 30f, 12f, GR, MONO, LFT, .16f)
+    dFitPara(c, Store.quote(d.x, "hm"), 40f, 38f, d.w - 80f, max(14f, d.h - 46f), 10f, 16f, MU, MONO, LFT, 0f, 1.35f)
+    dIco(c, "chev", d.w - 20f, 26f, 14f, MU)
 }
 
 fun hmCal(d: D) {
@@ -310,53 +323,9 @@ fun hmWeather(d: D) {
     cell(1, 2, "SET", hm(sunset), TW)
 }
 
-fun hmTasks(d: D) {
-    panel(d)
-    val c = d.c
-    val rh = d.h / 6
-    val v = Store.view(d.x)
-    dTx(c, "LOG // TASKS", 14f, rh * .64f, 11f, TX, MONO, LFT, .14f)
-    dTx(c, "${v.count { it.second.d }}/${v.size}", d.w - 14f, rh * .64f, 11f, GR, MONO, RGT)
-    for (i in 0 until 5) {
-        val t = v.getOrNull(i)?.second ?: break
-        val cy = rh * (i + 1.5f)
-        dLine(c, 14f, rh * (i + 1), d.w - 14f, rh * (i + 1), k("#1b2227"), 1f)
-        if (t.d) {
-            dRR(c, 14f, cy - 7f, 28f, cy + 7f, 3f, k("#228fd19e"), GR, 1f)
-            dIco(c, "check", 21f, cy, 10f, GR)
-        } else dRR(c, 14f, cy - 7f, 28f, cy + 7f, 3f, null, k("#5d6a73"), 1f)
-        val tx = dFit(t.t, d.w - 54f, 12f, MONO)
-        dTx(c, tx, 40f, cy + 4f, 12f, if (t.d) MU else TW, MONO)
-        if (t.d) dLine(c, 40f, cy + 1f, 40f + dTw(tx, 12f, MONO), cy + 1f, MU, 1f)
-    }
-}
+fun hmTasks(d: D) = drawTasks(d, HM_T)
 
-fun hmMusic(d: D) {
-    panel(d)
-    val c = d.c
-    val cy = d.h / 2
-    val a = min(d.h - 28f, 58f)
-    val top = cy - a / 2
-    dRR(c, 14f, top, 14f + a, top + a, 8f, k("#0e1418"), ED, 1f)
-    val hs = floatArrayOf(.25f, .6f, .85f, .45f, .7f)
-    for (i in 0 until 5) {
-        val bh = a * .6f * hs[i]
-        val bx = 14f + a * .18f + i * a * .14f
-        dRR(c, bx, top + a * .8f - bh, bx + a * .08f, top + a * .8f, 1f, GR)
-    }
-    val x0 = 28f + a
-    val mw = d.w * .58f - x0
-    dTx(c, dFit(musTitle(), mw, 13f, MONO), x0, cy - 8f, 13f, TW, MONO)
-    dTx(c, dFit(musArtist().uppercase(), mw, 11f, MONO, .06f), x0, cy + 8f, 11f, MU, MONO, LFT, .06f)
-    dBar(c, x0, x0 + mw, cy + 24f, musFrac(), RD, k("#1b2227"), 3f)
-    val u = d.w / 7
-    val ic = arrayOf("prev", if (PS.playing) "pause" else "play", "next")
-    for (i in 0 until 3) {
-        val bx = u * (4.5f + i)
-        dRR(c, bx - 16f, cy - 16f, bx + 16f, cy + 16f, 8f, null, ED, 1f)
-        dIco(c, ic[i], bx, cy, 15f, TX)
-    }
-}
+fun hmMusic(d: D) = drawMusic(d, HM_M)
 
 // Earth night side: glowing atmosphere + city lights (decorative; remove the widget to drop it)
 fun hmEarth(d: D) {
