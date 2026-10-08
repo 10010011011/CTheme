@@ -7,9 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack project.zip if present
+      - name: Unpack project.zip and apply single-file updates
         run: |
-          if [ -f project.zip ]; then mkdir -p proj && unzip -q -o project.zip -d proj && echo "DIR=proj" >> "$GITHUB_ENV"; else echo "DIR=." >> "$GITHUB_ENV"; fi
+          if [ -f project.zip ]; then mkdir -p proj && unzip -q -o project.zip -d proj; D=proj; else D=.; fi
+          echo "DIR=$D" >> "$GITHUB_ENV"
+          J="$D/app/src/main/java/com/reid/mist"
+          mkdir -p "$J"
+          for f in *.kt; do if [ -f "$f" ]; then cp "$f" "$J/$f"; fi; done
+          if [ -f AndroidManifest.xml ]; then cp AndroidManifest.xml "$D/app/src/main/AndroidManifest.xml"; fi
+          if [ -f widget.xml ]; then cp widget.xml "$D/app/src/main/res/layout/widget.xml"; fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
