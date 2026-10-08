@@ -17,6 +17,29 @@ private val INK = k("#2b1a0e")
 
 private fun panel(d: D, rd: Float = 12f) = dRR(d.c, 1f, 1f, d.w - 1, d.h - 1, rd, PAN, BR, 1.2f)
 
+private val TV_T = TStyle(
+    card = { dRR(it.c, 1f, 1f, it.w - 1, it.h - 1, 10f, PARCH) },
+    title = "VARIANCE LOG", tfH = MONO, hSize = 12f, hLs = .14f, head = INK,
+    tf = MONO, txt = INK, doneCol = k("#8a7355"), sub = k("#7a4a25"),
+    box = k("#c4501b"), boxFill = k("#c4501b"), boxDone = k("#c4501b"), check = PARCH,
+    circle = true, rule = k("#c9ae86"), num = true, right = true, count = false
+)
+
+private val TV_M = MStyle(
+    card = { panel(it) },
+    art = { d, l, t, s ->
+        val cv = Cover.get(d.x, PS.id)
+        val r = s / 2
+        if (cv != null) dImg(d.c, cv, l, t, l + s, t + s, r) else {
+            dCirc(d.c, l + r, t + r, r, k("#1a0f08"), BR, 1.2f)
+            dCirc(d.c, l + r, t + r, r * .7f, null, k("#4d6b3a1f"), 1f)
+            dCirc(d.c, l + r, t + r, r * .3f, OR)
+        }
+    },
+    tf = MONO, tfT = MONO, title = CR, sub = MUT, bar = OR, barBg = k("#3a2314"), ico = OR,
+    playBg = null, playFg = OR, box = null, ls = .06f
+)
+
 fun tvHeader(d: D) {
     panel(d, 10f)
     val c = d.c
@@ -105,28 +128,7 @@ fun tvTimeline(d: D) {
     dTx(c, "Finish a task and its branch is pruned.", p, d.h - 10f, 10f, MUT, MONO)
 }
 
-fun tvLog(d: D) {
-    val c = d.c
-    dRR(c, 1f, 1f, d.w - 1, d.h - 1, 10f, PARCH)
-    val rh = d.h / 6
-    val v = Store.view(d.x)
-    dTx(c, "VARIANCE LOG", 14f, rh * .64f, 12f, INK, MONO, LFT, .14f)
-    for (i in 0 until 5) {
-        val t = v.getOrNull(i)?.second ?: break
-        val cy = rh * (i + 1.5f)
-        dLine(c, 14f, rh * (i + 1), d.w - 14f, rh * (i + 1), k("#c9ae86"), 1f)
-        dTx(c, String.format(Locale.US, "%02d", i + 1), 14f, cy + 4f, 11f, k("#7a4a25"), MONO)
-        val tx = dFit(t.t, d.w - 90f, 12f, MONO)
-        val tc = if (t.d) k("#8a7355") else INK
-        dTx(c, tx, 42f, cy + 4f, 12f, tc, MONO)
-        if (t.d) dLine(c, 42f, cy + 1f, 42f + dTw(tx, 12f, MONO), cy + 1f, tc, 1f)
-        val cx = d.w - 22f
-        if (t.d) {
-            dCirc(c, cx, cy, 7f, k("#c4501b"))
-            dIco(c, "check", cx, cy, 9f, PARCH)
-        } else dCirc(c, cx, cy, 7f, null, k("#c4501b"), 1.5f)
-    }
-}
+fun tvLog(d: D) = drawTasks(d, TV_T)
 
 // Miss Minutes = shortcut to the phone's default assistant
 fun tvMiss(d: D) {
@@ -138,26 +140,8 @@ fun tvMiss(d: D) {
     dTx(c, "Assistant", d.w / 2, d.h - 11f, 11f, MUT, MONO, CTR)
 }
 
-fun tvMusic(d: D) {
-    panel(d)
-    val c = d.c
-    val cy = d.h / 2
-    val r = min(d.h / 2 - 12f, 30f)
-    val cx = 16f + r
-    dCirc(c, cx, cy, r, k("#1a0f08"), BR, 1.2f)
-    dCirc(c, cx, cy, r * .7f, null, k("#4d6b3a1f"), 1f)
-    dCirc(c, cx, cy, r * .3f, OR)
-    val x0 = 32f + 2 * r
-    val mw = d.w * .58f - x0
-    dTx(c, "NOW PLAYING", x0, cy - 14f, 10f, MUT, MONO, LFT, .1f)
-    dTx(c, dFit(musTitle(), mw, 13f, MONO), x0, cy + 4f, 13f, CR, MONO)
-    dBar(c, x0, x0 + mw, cy + 20f, musFrac(), OR, k("#3a2314"), 2f)
-    val u = d.w / 7
-    val ic = arrayOf("prev", if (PS.playing) "pause" else "play", "next")
-    for (i in 0 until 3) dIco(c, ic[i], u * (4.5f + i), cy, 20f, OR)
-}
+fun tvMusic(d: D) = drawMusic(d, TV_M)
 
 fun tvQuote(d: D) {
-    val q = Store.quote(d.x, "tv").uppercase()
-    dTx(d.c, dFit(q, d.w - 16f, 11f, MONO, .16f), d.w / 2, d.h / 2 + 4f, 11f, MUT, MONO, CTR, .16f)
+    dFitPara(d.c, Store.quote(d.x, "tv").uppercase(), 8f, 4f, d.w - 16f, d.h - 8f, 9f, 15f, MUT, MONO, CTR, .16f, 1.4f)
 }
