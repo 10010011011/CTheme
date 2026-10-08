@@ -61,3 +61,35 @@ val CLS: Map<String, Class<*>> = mapOf(
     "vc_ring" to VcRing::class.java,
     "vc_banner" to VcBanner::class.java
 )
+
+val LABELS: Map<String, String> = mapOf(
+    "fr_clock" to "Frieren - Clock",
+    "fr_cal" to "Frieren - Calendar",
+    "fr_photo_a" to "Frieren - Image A",
+    "fr_photo_b" to "Frieren - Image B",
+    "fr_quote" to "Frieren - Quote",
+    "fr_weather" to "Frieren - Weather",
+    "fr_tasks" to "Frieren - Tasks",
+    "fr_music" to "Frieren - Music",
+    "hm_orbit" to "Hail Mary - Orbit and clock",
+    "hm_link" to "Hail Mary - Link bar",
+    "hm_cal" to "Hail Mary - Calendar",
+    "hm_status" to "Hail Mary - Status",
+    "hm_weather" to "Hail Mary - Weather",
+    "hm_tasks" to "Hail Mary - Tasks",
+    "hm_music" to "Hail Mary - Music",
+    "hm_earth" to "Hail Mary - Earth art",
+    "tv_header" to "TVA - Terminal",
+    "tv_clock" to "TVA - Clock",
+    "tv_weather" to "TVA - Weather",
+    "tv_timeline" to "TVA - Timeline",
+    "tv_log" to "TVA - Variance log",
+    "tv_miss" to "TVA - Miss Minutes",
+    "tv_music" to "TVA - Music",
+    "tv_quote" to "TVA - Quote",
+    "vc_clock" to "Vocaloid - Vinyl clock",
+    "vc_music" to "Vocaloid - Music",
+    "vc_tasks" to "Vocaloid - Tasks",
+    "vc_ring" to "Vocaloid - Progress ring",
+    "vc_banner" to "Vocaloid - Quote banner"
+)
