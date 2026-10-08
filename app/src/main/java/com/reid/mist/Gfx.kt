@@ -6,8 +6,13 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.math.*
 
+class Zone(val l: Float, val t: Float, val r: Float, val b: Float, val a: String)
+
 class D(val c: Canvas, val w: Float, val h: Float, val x: Context) {
     val now: Calendar = Calendar.getInstance()
+    val zones = ArrayList<Zone>()
+    // declare a tappable rectangle (logical units) and the action it triggers
+    fun zone(l: Float, t: Float, r: Float, b: Float, a: String) { zones.add(Zone(l, t, r, b, a)) }
 }
 
 val LFT = Paint.Align.LEFT
@@ -166,8 +171,9 @@ fun dIco(c: Canvas, n: String, cx: Float, cy: Float, s: Float, col: Int) {
     dPath(c, p, col, true)
 }
 
-fun dWx(c: Canvas, code: Int, cx: Float, cy: Float, s: Float, col: Int) {
+fun dWx(c: Canvas, code: Int, cx: Float, cy: Float, s: Float, col: Int, night: Boolean = false) {
     if (code <= 1) {
+        if (night) { dMoon(c, cx, cy, s, col); return }
         dCirc(c, cx, cy, s * .24f, col)
         for (i in 0 until 8) {
             val a = i * PI.toFloat() / 4
@@ -197,3 +203,62 @@ fun mmss(ms: Int): String { val s = ms / 1000; return String.format(Locale.US, "
 fun musTitle(): String = if (PS.title.isEmpty()) "Nothing playing" else PS.title
 fun musArtist(): String = if (PS.title.isEmpty()) "Tap play" else PS.artist
 fun musFrac(): Float = if (PS.dur > 0) PS.pos.toFloat() / PS.dur else 0f
+
+fun dMoon(c: Canvas, cx: Float, cy: Float, s: Float, col: Int) {
+    val a = Path(); a.addCircle(cx, cy, s * .3f, Path.Direction.CW)
+    val b = Path(); b.addCircle(cx + s * .14f, cy - s * .08f, s * .27f, Path.Direction.CW)
+    a.op(b, Path.Op.DIFFERENCE)
+    dPath(c, a, col, true)
+}
+
+// music logo (two beamed notes)
+fun dNote(c: Canvas, cx: Float, cy: Float, s: Float, col: Int) {
+    val x1 = cx - s * .22f
+    val x2 = cx + s * .26f
+    val y1 = cy + s * .3f
+    val y2 = cy + s * .22f
+    dOval(c, x1, y1, s * .17f, s * .12f, -20f, col, 1f, true)
+    dOval(c, x2, y2, s * .17f, s * .12f, -20f, col, 1f, true)
+    val sw = s * .06f
+    val s1 = x1 + s * .15f
+    val s2 = x2 + s * .15f
+    dLine(c, s1, y1 - s * .02f, s1, cy - s * .38f, col, sw)
+    dLine(c, s2, y2 - s * .02f, s2, cy - s * .46f, col, sw)
+    val p = Path()
+    p.moveTo(s1, cy - s * .38f); p.lineTo(s2, cy - s * .46f); p.lineTo(s2, cy - s * .32f); p.lineTo(s1, cy - s * .24f); p.close()
+    dPath(c, p, col, true)
+}
+
+// song cover if the user added one for the current song, otherwise a music logo tile
+fun dArt(c: Canvas, x: Context, l: Float, t: Float, s: Float, rd: Float, bg: Int, fg: Int, line: Int? = null) {
+    val cv = Cover.get(x, PS.id)
+    if (cv != null) { dImg(c, cv, l, t, l + s, t + s, rd); return }
+    dRR(c, l, t, l + s, t + s, rd, bg, line, 1f)
+    dNote(c, l + s / 2, t + s / 2, s * .62f, fg)
+}
+
+fun dLinesMax(s: String, mw: Float, size: Float, tf: Typeface, ls: Float, max: Int): List<String> {
+    val l = dLines(s, mw, size, tf, ls)
+    if (l.size <= max) return l
+    val out = ArrayList<String>(l.take(max - 1))
+    out.add(dFit(l.drop(max - 1).joinToString(" "), mw, size, tf, ls))
+    return out
+}
+
+// largest font (between minS and maxS) at which the wrapped text fills the box without overflowing
+fun dFitPara(c: Canvas, s: String, l: Float, t: Float, w: Float, h: Float, minS: Float, maxS: Float, col: Int, tf: Typeface,
+             al: Paint.Align = LFT, ls: Float = 0f, lhm: Float = 1.3f) {
+    var sz = maxS
+    var lines = dLines(s, w, sz, tf, ls)
+    while (sz > minS && lines.size * sz * lhm > h) { sz -= .5f; lines = dLines(s, w, sz, tf, ls) }
+    val maxL = max(1, (h / (sz * lhm)).toInt())
+    if (lines.size > maxL) lines = dLinesMax(s, w, sz, tf, ls, maxL)
+    val lh = sz * lhm
+    val x = when (al) {
+        Paint.Align.CENTER -> l + w / 2
+        Paint.Align.RIGHT -> l + w
+        else -> l
+    }
+    var y = t + (h - lines.size * lh) / 2 + lh / 2 + sz * .35f
+    for (ln in lines) { dTx(c, ln, x, y, sz, col, tf, al, ls); y += lh }
+}
